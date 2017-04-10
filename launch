@@ -1,0 +1,27 @@
+#!/bin/sh
+
+BUILD_DIR=
+
+if [ $# -ge 2 ]
+then
+    case $1 in
+        -b|--build)
+        BUILD_DIR=$2
+        shift
+        shift
+        ;;
+        *)
+        ;;
+    esac
+fi
+
+if [ -n "$BUILD_DIR" ]
+then
+    echo "Using WPE build directory: $BUILD_DIR"
+    export LD_LIBRARY_PATH=$BUILD_DIR/lib:$LD_LIBRARY_PATH
+    export WEBKIT_EXEC_PATH=$BUILD_DIR/bin
+fi
+
+export LUA_PATH="$PWD/src/?.lua"
+
+./src/main $@
