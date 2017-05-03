@@ -2,24 +2,19 @@
 local module = {}
 
 local glib = require("lib.glib")
-local wpewebkit = require("lib.wpewebkit")
+local wpe = require("lib.wpe")
 
 function module.run(args)
     local context = glib.g_main_context_default()
     local loop = glib.g_main_loop_new(context, 0)
 
-    local context = wpewebkit.WKContextCreate()
-    local pageGroupIdentifier = wpewebkit.WKStringCreateWithUTF8CString("WPEPageGroup")
-    local pageGroup = wpewebkit.WKPageGroupCreateWithIdentifier(pageGroupIdentifier)
-    local pageConfiguration = wpewebkit.WKPageConfigurationCreate()
-    wpewebkit.WKPageConfigurationSetContext(pageConfiguration, context)
-    wpewebkit.WKPageConfigurationSetPageGroup(pageConfiguration, pageGroup)
+    local page_configuration = wpe.PageConfiguration()
 
-    local view = wpewebkit.WKViewCreate(pageConfiguration)
-    local page = wpewebkit.WKViewGetPage(view)
+    page_configuration:set_context(wpe.Context())
+    page_configuration:set_page_group(wpe.PageGroup("WPEPageGroup"))
 
-    local url = wpewebkit.WKURLCreateWithUTF8CString("https://inexorabletash.github.io/polyfill/demos/raf.html")
-    wpewebkit.WKPageLoadURL(page, url)
+    local view = wpe.View(page_configuration)
+    view:get_page():load_url("https://inexorabletash.github.io/polyfill/demos/raf.html")
 
     glib.g_main_loop_run(loop);
 

@@ -26,6 +26,8 @@ ffi.cdef[[
     void WKPageLoadURL(WKPageRef page, WKURLRef url);
 
     WKURLRef WKURLCreateWithUTF8CString(const char* string);
+
+    void WKRelease(void*);
 ]]
 
 return lib
