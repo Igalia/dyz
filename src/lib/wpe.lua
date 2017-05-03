@@ -49,6 +49,9 @@ local URL = Type "URL" {
     __tostring = function (self)
         return tostring(wk.WKURLCopyString(self))
     end;
+    __eq = function (self, other)
+        return ffi.istype(URL, other) and wk.WKURLIsEqual(self, other)
+    end;
     __index = {
         get_hostname = function (self)
             return tostring(wk.WKURLCopyHostName(self))

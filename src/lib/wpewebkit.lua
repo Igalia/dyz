@@ -33,6 +33,7 @@ ffi.cdef[[
     WKStringRef WKURLCopyScheme(WKURLRef);
     WKStringRef WKURLCopyPath(WKURLRef);
     WKStringRef WKURLCopyLastPathComponent(WKURLRef);
+    bool WKURLIsEqual(WKURLRef, WKURLRef other);
 
     void WKRelease(void*);
 ]]
