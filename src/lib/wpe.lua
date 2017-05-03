@@ -49,6 +49,20 @@ local URL = Type "URL" {
     __tostring = function (self)
         return tostring(wk.WKURLCopyString(self))
     end;
+    __index = {
+        get_hostname = function (self)
+            return tostring(wk.WKURLCopyHostName(self))
+        end;
+        get_scheme = function (self)
+            return tostring(wk.WKURLCopyScheme(self))
+        end;
+        get_path = function (self)
+            return tostring(wk.WKURLCopyPath(self))
+        end;
+        get_last_path_component = function (self)
+            return tostring(wk.WKURLCopyLastPathComponent(self))
+        end;
+    };
 }
 
 Type "Context" {

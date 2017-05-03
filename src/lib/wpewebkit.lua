@@ -29,6 +29,10 @@ ffi.cdef[[
 
     WKURLRef WKURLCreateWithUTF8CString(const char* string);
     WKStringRef WKURLCopyString(WKURLRef);
+    WKStringRef WKURLCopyHostName(WKURLRef);
+    WKStringRef WKURLCopyScheme(WKURLRef);
+    WKStringRef WKURLCopyPath(WKURLRef);
+    WKStringRef WKURLCopyLastPathComponent(WKURLRef);
 
     void WKRelease(void*);
 ]]
