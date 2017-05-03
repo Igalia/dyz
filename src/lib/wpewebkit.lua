@@ -12,6 +12,8 @@ ffi.cdef[[
     typedef const struct OpaqueWKURL* WKURLRef;
 
     WKStringRef WKStringCreateWithUTF8CString(const char* string);
+    size_t WKStringGetMaximumUTF8CStringSize(WKStringRef);
+    size_t WKStringGetUTF8CString(WKStringRef, char* buffer, size_t bufferSize);
 
     WKContextRef WKContextCreate();
 
@@ -26,6 +28,7 @@ ffi.cdef[[
     void WKPageLoadURL(WKPageRef page, WKURLRef url);
 
     WKURLRef WKURLCreateWithUTF8CString(const char* string);
+    WKStringRef WKURLCopyString(WKURLRef);
 
     void WKRelease(void*);
 ]]

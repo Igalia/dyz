@@ -24,6 +24,8 @@ local function Type(name)
     return TypeAlias(name)("struct OpaqueWK" .. name)
 end
 
+local CharArray = ffi.typeof("char[?]")
+
 -- The "wpe" module does *not* expose the WKStringRef type, but we want
 -- to use it in a more convenient way so we define a metatype for it.
 local String = ffi.metatype("struct OpaqueWKString", {
@@ -31,12 +33,21 @@ local String = ffi.metatype("struct OpaqueWKString", {
     __new = function (ct, utf8)
         return wk.WKStringCreateWithUTF8CString(utf8)
     end;
+    __tostring = function (self)
+        local n = wk.WKStringGetMaximumUTF8CStringSize(self)
+        local s = CharArray(n + 1)
+        local r = wk.WKStringGetUTF8CString(self, s, n + 1)
+        return s
+    end;
 })
 
 -- URL gets exposed, *and* we also keep a local reference for convenience.
 local URL = Type "URL" {
     __new = function (ct, url)
         return wk.WKURLCreateWithUTF8CString(url)
+    end;
+    __tostring = function (self)
+        return tostring(wk.WKURLCopyString(self))
     end;
 }
 
