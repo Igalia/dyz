@@ -25,4 +25,4 @@ fi
 
 export LUA_PATH="$CUR_DIR/src/?.lua"
 
-exec "$CUR_DIR/src/main" $@
+exec "$CUR_DIR/src/main" "$@"
