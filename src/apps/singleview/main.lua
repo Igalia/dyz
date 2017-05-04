@@ -14,7 +14,13 @@ function module.run(args)
     page_configuration:set_page_group(wpe.PageGroup("WPEPageGroup"))
 
     local view = wpe.View(page_configuration)
-    view:get_page():load_url("https://inexorabletash.github.io/polyfill/demos/raf.html")
+
+    local url = "https://www.duckduckgo.com"
+    if #args > 0 then
+        url = args[1]
+    end
+
+    view:get_page():load_url(url)
 
     glib.g_main_loop_run(loop);
 
