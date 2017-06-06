@@ -1,0 +1,32 @@
+CC ?= gcc
+LUAJIT_FLAGS = $(shell pkg-config --cflags --libs luajit)
+LUAJIT_VER = $(shell pkg-config --variable=abiver luajit)
+LUASRC = $(shell find . -regex '[^\#]*\.lua' -printf '%P ')
+
+
+BINDIR = $(DESTDIR)/@DYZBINDIR@
+LUADIR = $(DESTDIR)/@DYZLUADIR@
+
+dyz: dyz.c config.h
+	$(CC)  -o $@ $? $(LUAJIT_FLAGS) -Wl,--no-as-needed -Wl,-E
+
+install-bin: dyz
+	@mkdir -p $(BINDIR)
+	@cp $^ $(BINDIR)
+
+copy-luafiles: $(LUASRC)
+	@mkdir -p $(LUADIR)
+	@$(foreach LUAFILE,$^, \
+		mkdir -p  $(addprefix $(LUADIR)/,$(dir $(LUAFILE))) ; \
+		cp -f $(LUAFILE) $(addprefix $(LUADIR)/,$(dir $(LUAFILE))) ;\
+	)
+
+all: dyz
+
+install: install-bin copy-luafiles
+	@echo "Installing dyz into $(BINDIR) and $(LUADIR) ..."
+
+clean:
+	@rm -f dyz
+
+.PHONY: clean
