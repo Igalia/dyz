@@ -15,7 +15,7 @@ Build
 To build **dyz** you just need to use the following line:
 
 ```
-user@/path/to/dyz$ ./build
+user@/path/to/dyz$ ./autogen.sh && make
 ```
 
 You need also to build WPE port in your WebKit clone:
