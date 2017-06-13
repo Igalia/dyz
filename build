@@ -1,8 +1,0 @@
-#!/bin/sh
-make -s -C src
-if [ $? -eq 0 ]
-then
-    echo "Everything built."
-else
-    exit 1
-fi
