@@ -1,3 +1,4 @@
-src/main
-
 .*.sw[a-p]
+*.o
+config.mk
+src/dyz
