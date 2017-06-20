@@ -7,12 +7,15 @@ ffi.cdef[[
     typedef struct _GMainLoop GMainLoop;
 
     typedef int gboolean;
+    typedef void* gpointer;
 
     GMainContext* g_main_context_default (void);
 
     GMainLoop* g_main_loop_new (GMainContext *context, gboolean is_running);
     void g_main_loop_run (GMainLoop *loop);
     void g_main_loop_unref (GMainLoop *loop);
+
+    void g_object_unref (gpointer object);
 ]]
 
 return lib
