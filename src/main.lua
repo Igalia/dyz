@@ -1,5 +1,6 @@
 local ffi = require("ffi")
 local singleview = require("apps.singleview.main")
+local fdo = require("apps.fdo.main")
 
 ffi.cdef[[
     extern int argc;
@@ -12,7 +13,7 @@ function main ()
         table.insert(args, ffi.string(ffi.C.argv[i]))
     end
 
-    singleview.run(args)
+    fdo.run(args)
 end
 
 main()
