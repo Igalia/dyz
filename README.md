@@ -55,3 +55,13 @@ user@/path/to/WebKit$ Tools/jhbuild/jhbuild-wrapper --wpe run /path/to/dyz/launc
     ```
     user@path/to/dyz$ ./launch -b /path/to/WebKit/WebKitBuild/Release/
     ```
+
+
+Cross-Build
+-----------
+
+For cross-building it should suffice with setting the environment variables
+CC pointing to the name of your cross-compiler and PKG_CONFIG_PATH to the
+path where the target sysroot is installed (needs luajit)
+
+make clean && CC=arm-linux-gnueabihf-gcc PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig make

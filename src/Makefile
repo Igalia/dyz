@@ -5,6 +5,30 @@ BINDIR ?= $(PREFIX)/bin
 LIBDIR ?= $(PREFIX)/lib
 CC ?= gcc
 
+TARGET_MACHINE := $(shell $(CC) -dumpmachine)
+
+ifneq (,$(findstring aarch64-,$(TARGET_MACHINE)))
+	ARCH := arm64
+else ifneq (,$(findstring arm-,$(TARGET_MACHINE)))
+	ARCH := arm
+else ifneq (,$(findstring mips-,$(TARGET_MACHINE)))
+	ARCH := mips
+else ifneq (,$(findstring x86_64-,$(TARGET_MACHINE)))
+	ARCH := x64
+else ifneq (,$(findstring i686-,$(TARGET_MACHINE)))
+	ARCH := x86
+else ifneq (,$(findstring i586-,$(TARGET_MACHINE)))
+	ARCH := x86
+else ifneq (,$(findstring i486-,$(TARGET_MACHINE)))
+	ARCH := x86
+else ifneq (,$(findstring i386-,$(TARGET_MACHINE)))
+	ARCH := x86
+endif
+
+ifeq ($(strip $(ARCH)),)
+$(error Unsupported target CPU: $(TARGET_MACHINE))
+endif
+
 LUA_SRCS := \
 	entrypoint.lua \
 	main.lua \
@@ -32,7 +56,7 @@ dyz: main.o $(LUA_OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS) -Wl,--no-as-needed -Wl,-E
 
 %_lua.o: %.lua
-	$(LUAJIT) -bg -n $(subst /,.,$*) $< $@
+	$(LUAJIT) -bg -a $(ARCH) -n $(subst /,.,$*) $< $@
 
 install: dyz
 	mkdir -p $(DESTDIR)$(BINDIR)
