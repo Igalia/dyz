@@ -2,7 +2,7 @@
 local module = {}
 
 local glib = require("lib.glib")
-local wpe = require("lib.wpe")
+local wpe = require("lib.wpewebkit_glibapi")
 
 function module.run(args)
     local context = glib.g_main_context_default()

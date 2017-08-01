@@ -33,7 +33,7 @@ LUA_SRCS := \
 	entrypoint.lua \
 	main.lua \
 	lib/glib.lua \
-	lib/wpe.lua \
+	lib/wpewebkit_glibapi.lua \
 	apps/singleview/main.lua
 
 LUA_OBJS := \
