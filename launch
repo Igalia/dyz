@@ -23,6 +23,7 @@ then
     export WEBKIT_EXEC_PATH=$BUILD_DIR/bin
 fi
 
+export LD_LIBRARY_PATH=$CUR_DIR/src:$LD_LIBRARY_PATH
 export LUA_PATH="$CUR_DIR/src/?.lua"
 
 exec "$CUR_DIR/src/dyz" "$@"

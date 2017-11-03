@@ -6,6 +6,7 @@ ffi.cdef[[
     typedef struct _WebKitAutomationSession WebKitAutomationSession;
     typedef struct _WebKitWebContext WebKitWebContext;
     typedef struct _WebKitWebView WebKitWebView;
+    typedef struct _WebKitWebViewBackend WebKitWebViewBackend;
     typedef struct _WebKitSettings WebKitSettings;
 
     WebKitSettings* webkit_settings_new_with_settings (const char* first_setting_name, ...);
@@ -19,6 +20,8 @@ ffi.cdef[[
     WebKitWebView* webkit_web_view_new ();
     void webkit_web_view_set_settings (WebKitWebView* web_view, WebKitSettings* settings);
     void webkit_web_view_load_uri (WebKitWebView* web_view, const char* uri);
+
+    WebKitWebViewBackend* webkit_web_view_backend_new(struct wpe_view_backend* backend, GDestroyNotify notify, gpointer user_data);
 ]]
 
 return wk

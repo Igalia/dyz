@@ -10,6 +10,7 @@ ffi.cdef[[
     typedef void (*GCallback)(void);
     typedef void (*GClosureNotify)(void *data, GClosure *closure);
     typedef int (*GSourceFunc)(void *data);
+    typedef void (*GDestroyNotify)(void *data);
 
     typedef enum { G_CONNECT_AFTER = 1, G_CONNECT_SWAPPED = 2 } GConnectFlags;
 

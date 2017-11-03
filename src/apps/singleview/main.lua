@@ -4,6 +4,8 @@ local module = {}
 local ffi = require("ffi")
 local glib = require("lib.glib")
 local wpe = require("lib.wpewebkit_glibapi")
+local wpebackend_fdo = require("lib.wpebackend_fdo")
+local wlglue = require("wlglue")
 
 ffi.cdef[[
     typedef void (*WebContextAutomationStartedCallback) (WebKitWebContext*, WebKitAutomationSession*, WebKitWebView*);
@@ -41,6 +43,30 @@ function module.run(args)
     local context = glib.g_main_context_default()
     local loop = glib.g_main_loop_new(context, 0)
 
+    local host = wlglue.wlglue_host_create()
+
+    wpebackend_fdo.wpe_fdo_initialize_for_egl_display(wlglue.wlglue_host_get_egl_display(host))
+
+    local window_client = ffi.new("struct wlglue_window_client")
+    local window = wlglue.wlglue_window_create(host, window_client)
+
+    local exportable_client = ffi.new("struct wpe_view_backend_exportable_fdo_client")
+    local exportable = wpebackend_fdo.wpe_view_backend_exportable_fdo_create(exportable_client, nil, 1280, 720)
+
+    window_client.frame_displayed =
+        function()
+            wpebackend_fdo.wpe_view_backend_exportable_fdo_dispatch_frame_complete(exportable)
+        end
+    window_client.release_buffer_resource =
+        function(buffer_resource)
+            wpebackend_fdo.wpe_view_backend_exportable_fdo_dispatch_release_buffer(exportable, buffer_resource)
+        end
+
+    exportable_client.export_buffer_resource =
+        function(data, buffer_resource)
+            wlglue.wlglue_window_display_buffer(window, buffer_resource)
+        end
+
     local automation_mode = table_contains(args, "--automation")
     local web_context
     if automation_mode then
@@ -49,12 +75,17 @@ function module.run(args)
         web_context = wpe.webkit_web_context_get_default()
     end
 
+    local view_backend = wpe.webkit_web_view_backend_new(
+                        wpebackend_fdo.wpe_view_backend_exportable_fdo_get_view_backend(exportable),
+                        wpebackend_fdo.wpe_view_backend_exportable_fdo_destroy,
+                        exportable)
     local settings = wpe.webkit_settings_new_with_settings(
                         "allow-file-access-from-file-urls", true,
                         "allow-universal-access-from-file-urls", true,
                         "enable-write-console-messages-to-stdout", true,
                         nil)
     local view = glib.g_object_new(wpe.webkit_web_view_get_type(),
+                        "backend", view_backend,
                         "web-context", web_context,
                         "settings", settings,
                         "is-controlled-by-automation", automation_mode,
