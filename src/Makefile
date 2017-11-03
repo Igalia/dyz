@@ -52,7 +52,19 @@ endif
 
 all: dyz
 
-dyz: main.o $(LUA_OBJS)
+X11HOST_CFLAGS := $(shell pkg-config egl glib-2.0 x11-xcb --cflags)
+X11HOST_LDLIBS := $(shell pkg-config egl glib-2.0 x11-xcb --libs)
+libx11host.so: x11host.cpp
+	$(CXX) -shared -std=c++11 -fPIC -o $@ $^ $(X11HOST_CFLAGS) $(X11HOST_LDLIBS)
+
+WLGLUE_CFLAGS := $(shell pkg-config egl glib-2.0 wayland-client wayland-egl glesv2 --cflags)
+WLGLUE_LDLIBS := $(shell pkg-config egl glib-2.0 wayland-client wayland-egl glesv2 --libs)
+xdg-shell-unstable-v6-protocol.o: xdg-shell-unstable-v6-protocol.c
+	$(CC) -c -o $@ $^ $(WLGLUE_CFLAGS)
+libwlglue.so: wlglue.cpp xdg-shell-unstable-v6-protocol.o
+	$(CXX) -shared -std=c++11 -fPIC -o $@ $^ $(WLGLUE_CFLAGS) $(WLGLUE_LDLIBS)
+
+dyz: main.o libwlglue.so $(LUA_OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS) -Wl,--no-as-needed -Wl,-E
 
 %_lua.o: %.lua
