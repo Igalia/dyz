@@ -3,6 +3,7 @@
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 LIBDIR ?= $(PREFIX)/lib
+LUAJIT ?= luajit
 CC ?= gcc
 
 TARGET_MACHINE := $(shell $(CC) -dumpmachine)
@@ -45,10 +46,6 @@ LUAJIT_LDLIBS := $(shell pkg-config luajit --libs)
 
 CFLAGS  += $(LUAJIT_CFLAGS)
 LDFLAGS += $(LUAJIT_LDLIBS)
-
-ifeq ($(strip $(LUAJIT)),)
-  LUAJIT := $(shell pkg-config luajit --variable=prefix)/bin/luajit
-endif
 
 all: dyz
 
