@@ -106,7 +106,7 @@ function module.run(args)
         url = "https://www.duckduckgo.com"
     end
 
-    view:get_page():load_url(url)
+    wpe.webkit_web_view_load_uri(view, url)
 
     glib.g_main_loop_run(loop)
 
