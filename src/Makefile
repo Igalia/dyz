@@ -74,9 +74,11 @@ dyz: main.o libwlglue.so $(LUA_OBJS)
 %_lua.o: %.lua
 	$(LUAJIT) -bg -a $(ARCH) -n $(subst /,.,$*) $< $@
 
-install: dyz
+install: dyz libwlglue.so
 	mkdir -p $(DESTDIR)$(BINDIR)
+	mkdir -p $(DESTDIR)$(LIBDIR)
 	install -m755 -t $(DESTDIR)$(BINDIR) dyz
+	install -m755 -t $(DESTDIR)$(LIBDIR) libwlglue.so
 
 clean:
 	$(RM) $(LUA_OBJS) main.o dyz
