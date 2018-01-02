@@ -81,4 +81,4 @@ install: dyz libwlglue.so
 	install -m755 -t $(DESTDIR)$(LIBDIR) libwlglue.so
 
 clean:
-	$(RM) $(LUA_OBJS) main.o dyz
+	$(RM) $(LUA_OBJS) main.o dyz libwlglue.so
