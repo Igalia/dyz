@@ -46,10 +46,11 @@ LUA_OBJS := \
 LUAJIT_CFLAGS := $(shell pkg-config luajit --cflags)
 LUAJIT_LDLIBS := $(shell pkg-config luajit --libs)
 
+WPEBACKEND_CFLAGS := $(shell pkg-config wpe --cflags)
+WPEBACKEND_LDLIBS := $(shell pkg-config wpe --libs)
+
 CFLAGS  += $(LUAJIT_CFLAGS)
 LDFLAGS += $(LUAJIT_LDLIBS)
-
-all: dyz
 
 X11HOST_CFLAGS := $(shell pkg-config egl glib-2.0 x11-xcb --cflags)
 X11HOST_LDLIBS := $(shell pkg-config egl glib-2.0 x11-xcb --libs)
@@ -71,11 +72,18 @@ dyz: main.o libwlglue.so $(LUA_OBJS)
 %_lua.o: %.lua
 	$(LUAJIT) -bg -a $(ARCH) -n $(subst /,.,$*) $< $@
 
-install: dyz libwlglue.so
+libWPEBackend-dyz.so: loader.c
+	$(CC) -shared -fPIC -o $@ $^ $(WPEBACKEND_CFLAGS) $(WPEBACKEND_LDLIBS)
+
+all: dyz libwlglue.so libWPEBackend-dyz.so
+
+install: dyz libwlglue.so libWPEBackend-dyz.so
 	mkdir -p $(DESTDIR)$(BINDIR)
 	mkdir -p $(DESTDIR)$(LIBDIR)
 	install -m755 -t $(DESTDIR)$(BINDIR) dyz
 	install -m755 -t $(DESTDIR)$(LIBDIR) libwlglue.so
+	install -m755 -t $(DESTDIR)$(LIBDIR) libWPEBackend-dyz.so
+	ln -frs $(DESTDIR)$(LIBDIR)/libWPEBackend-dyz.so $(DESTDIR)$(LIBDIR)/libWPEBackend-default.so
 
 clean:
 	$(RM) $(LUA_OBJS) main.o dyz libwlglue.so
