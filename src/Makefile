@@ -30,11 +30,13 @@ $(error Unsupported target CPU: $(TARGET_MACHINE))
 endif
 
 LUA_SRCS := \
+	apps/singleview/main.lua \
 	entrypoint.lua \
-	main.lua \
 	lib/glib.lua \
+	lib/wpebackend_fdo.lua \
 	lib/wpewebkit_glibapi.lua \
-	apps/singleview/main.lua
+	main.lua \
+	wlglue.lua
 
 LUA_OBJS := \
 	$(patsubst %.lua,%_lua.o,$(LUA_SRCS))
