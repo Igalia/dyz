@@ -64,10 +64,12 @@ WLGLUE_LDLIBS := $(shell pkg-config egl glib-2.0 wayland-client wayland-egl gles
 xdg-shell-unstable-v6-protocol.o: xdg-shell-unstable-v6-protocol.c
 	$(CC) -c -o $@ $^ $(WLGLUE_CFLAGS)
 libwlglue.so: wlglue.cpp xdg-shell-unstable-v6-protocol.o
-	$(CXX) -shared -std=c++11 -fPIC -o $@ $^ $(WLGLUE_CFLAGS) $(WLGLUE_LDLIBS)
+	mkdir -p $(DESTDIR)$(LIBDIR)
+	$(CXX) -shared -std=c++11 -fPIC -o $@ $^ $(WLGLUE_CFLAGS) $(WLGLUE_LDLIBS) -Wl,-rpath -Wl,$(LIBDIR)
 
 dyz: main.o libwlglue.so $(LUA_OBJS)
-	$(CC) -o $@ $^ $(LDFLAGS) -Wl,--no-as-needed -Wl,-E
+	mkdir -p $(DESTDIR)$(BINDIR)
+	$(CC) -o $@ $^ $(LDFLAGS) -Wl,--no-as-needed -Wl,-E -Wl,-rpath -Wl,$(LIBDIR)
 
 %_lua.o: %.lua
 	$(LUAJIT) -bg -a $(ARCH) -n $(subst /,.,$*) $< $@
