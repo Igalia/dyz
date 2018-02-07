@@ -46,9 +46,6 @@ LUA_OBJS := \
 LUAJIT_CFLAGS := $(shell pkg-config luajit --cflags)
 LUAJIT_LDLIBS := $(shell pkg-config luajit --libs)
 
-WPEBACKEND_CFLAGS := $(shell pkg-config wpe --cflags)
-WPEBACKEND_LDLIBS := $(shell pkg-config wpe --libs)
-
 CFLAGS  += $(LUAJIT_CFLAGS)
 LDFLAGS += $(LUAJIT_LDLIBS)
 
@@ -72,8 +69,8 @@ dyz: main.o libwlglue.so $(LUA_OBJS)
 %_lua.o: %.lua
 	$(LUAJIT) -bg -a $(ARCH) -n $(subst /,.,$*) $< $@
 
-libWPEBackend-dyz.so: loader.c
-	$(CC) -shared -fPIC -o $@ $^ $(WPEBACKEND_CFLAGS) $(WPEBACKEND_LDLIBS)
+libWPEBackend-dyz.so: wpe/loader.c
+	$(CC) -shared -fPIC -o $@ $^
 
 all: dyz libwlglue.so libWPEBackend-dyz.so
 
@@ -86,4 +83,4 @@ install: dyz libwlglue.so libWPEBackend-dyz.so
 	ln -frs $(DESTDIR)$(LIBDIR)/libWPEBackend-dyz.so $(DESTDIR)$(LIBDIR)/libWPEBackend-default.so
 
 clean:
-	$(RM) $(LUA_OBJS) main.o dyz libwlglue.so
+	$(RM) $(LUA_OBJS) main.o dyz libwlglue.so libWPEBackend-dyz.so

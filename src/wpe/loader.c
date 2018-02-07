@@ -1,5 +1,4 @@
-#include <wpe/loader.h>
-
+#include "wpe-spi/WPE.loader_interface.h"
 #include <dlfcn.h>
 #include <stdio.h>
 #include <stdlib.h>
