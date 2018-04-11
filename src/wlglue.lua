@@ -11,6 +11,10 @@ ffi.cdef[[
     struct wlglue_window_client {
         void (*frame_displayed)();
         void (*release_buffer_resource)(struct wl_resource* buffer_resource);
+
+        void (*dispatch_input_pointer_event)(struct wpe_input_pointer_event* event);
+        void (*dispatch_input_axis_event)(struct wpe_input_axis_event* event);
+        void (*dispatch_input_keyboard_event)(struct wpe_input_keyboard_event* event);
     };
 
     struct WlGlueWindow* wlglue_window_create(struct WlGlueHost* host, struct wlglue_window_client* client);

@@ -57,8 +57,8 @@ X11HOST_LDLIBS := $(shell pkg-config egl glib-2.0 x11-xcb --libs)
 libx11host.so: x11host.cpp
 	$(CXX) -shared -std=c++11 -fPIC -o $@ $^ $(X11HOST_CFLAGS) $(X11HOST_LDLIBS)
 
-WLGLUE_CFLAGS := $(shell pkg-config egl glib-2.0 wayland-client wayland-egl glesv2 --cflags)
-WLGLUE_LDLIBS := $(shell pkg-config egl glib-2.0 wayland-client wayland-egl glesv2 --libs)
+WLGLUE_CFLAGS := $(shell pkg-config egl glib-2.0 wayland-client wayland-egl glesv2 wpe xkbcommon --cflags)
+WLGLUE_LDLIBS := $(shell pkg-config egl glib-2.0 wayland-client wayland-egl glesv2 wpe xkbcommon --libs)
 xdg-shell-unstable-v6-protocol.o: xdg-shell-unstable-v6-protocol.c
 	$(CC) -c -o $@ $^ $(WLGLUE_CFLAGS)
 libwlglue.so: wlglue.cpp xdg-shell-unstable-v6-protocol.o

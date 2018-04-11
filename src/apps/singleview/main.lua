@@ -4,6 +4,7 @@ local module = {}
 local ffi = require("ffi")
 local glib = require("lib.glib")
 local wpe = require("lib.wpewebkit_glibapi")
+local wpebackend = require("lib.wpebackend")
 local wpebackend_fdo = require("lib.wpebackend_fdo")
 local wlglue = require("wlglue")
 
@@ -52,6 +53,7 @@ function module.run(args)
 
     local exportable_client = ffi.new("struct wpe_view_backend_exportable_fdo_client")
     local exportable = wpebackend_fdo.wpe_view_backend_exportable_fdo_create(exportable_client, nil, 1280, 720)
+    local exportable_view_backend = wpebackend_fdo.wpe_view_backend_exportable_fdo_get_view_backend(exportable)
 
     window_client.frame_displayed =
         function()
@@ -60,6 +62,18 @@ function module.run(args)
     window_client.release_buffer_resource =
         function(buffer_resource)
             wpebackend_fdo.wpe_view_backend_exportable_fdo_dispatch_release_buffer(exportable, buffer_resource)
+        end
+    window_client.dispatch_input_pointer_event =
+        function(event)
+            wpebackend.wpe_view_backend_dispatch_pointer_event(exportable_view_backend, event)
+        end
+    window_client.dispatch_input_axis_event =
+        function(event)
+            wpebackend.wpe_view_backend_dispatch_axis_event(exportable_view_backend, event)
+        end
+    window_client.dispatch_input_keyboard_event =
+        function(event)
+            wpebackend.wpe_view_backend_dispatch_keyboard_event(exportable_view_backend, event);
         end
 
     exportable_client.export_buffer_resource =

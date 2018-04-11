@@ -11,8 +11,16 @@
 
 #include <cstdio>
 #include <cstring>
-
 #include <memory>
+#include <unordered_map>
+
+#include <linux/input.h>
+#include <wpe/input.h>
+
+#include <unistd.h>
+#include <sys/mman.h>
+#include <xkbcommon/xkbcommon.h>
+#include <xkbcommon/xkbcommon-compose.h>
 
 struct EventSource {
     static GSourceFuncs sourceFuncs;
@@ -66,9 +74,54 @@ struct WlGlueHost {
     struct wl_display* display;
     struct wl_compositor* compositor;
     struct zxdg_shell_v6* xdg_v6;
+    struct wl_seat* seat;
     GSource* eventSource;
 
     EGLDisplay eglDisplay;
+
+    struct SeatData {
+        std::unordered_map<struct wl_surface*, struct wlglue_window_client*> clients;
+
+        struct {
+            struct wl_pointer* object { nullptr };
+            std::pair<struct wl_surface*, struct wlglue_window_client*> target;
+            std::pair<int, int> coords { 0, 0 };
+            uint32_t button { 0 };
+            uint32_t state { 0 };
+        } pointer;
+
+        struct {
+            struct wl_keyboard* object { nullptr };
+            std::pair<struct wl_surface*, struct wlglue_window_client*> target;
+        } keyboard;
+
+        struct {
+            struct xkb_context* context { nullptr };
+            struct xkb_keymap* keymap { nullptr };
+            struct xkb_state* state { nullptr };
+            struct {
+                xkb_mod_index_t control { 0 };
+                xkb_mod_index_t alt { 0 };
+                xkb_mod_index_t shift { 0 };
+            } indexes;
+            uint8_t modifiers { 0 };
+            struct xkb_compose_table* composeTable { nullptr };
+            struct xkb_compose_state* composeState { nullptr };
+        } xkb;
+
+        struct {
+            int32_t rate;
+            int32_t delay;
+        } repeatInfo { 0, 0 };
+
+        struct {
+            uint32_t key;
+            uint32_t time;
+            uint32_t state;
+            uint32_t eventSource;
+        } repeatData { 0, 0, 0, 0 };
+
+    } seatData;
 };
 
 static const struct wl_registry_listener s_registryListener = {
@@ -82,6 +135,9 @@ static const struct wl_registry_listener s_registryListener = {
 
         if (!std::strcmp(interface, "zxdg_shell_v6"))
             host->xdg_v6 = static_cast<struct zxdg_shell_v6*>(wl_registry_bind(registry, name, &zxdg_shell_v6_interface, 1));
+
+        if (!std::strcmp(interface, "wl_seat"))
+            host->seat = static_cast<struct wl_seat*>(wl_registry_bind(registry, name, &wl_seat_interface, 4));
     },
     // global_remove
     [](void*, struct wl_registry*, uint32_t) { },
@@ -111,6 +167,268 @@ static const struct zxdg_toplevel_v6_listener s_xdg6ToplevelListener = {
     },
     // close
     [](void*, struct zxdg_toplevel_v6*) { },
+};
+
+struct wlglue_window_client {
+    void (*frame_displayed)();
+    void (*release_buffer_resource)(struct wl_resource*);
+
+    void (*dispatch_input_pointer_event)(struct wpe_input_pointer_event*);
+    void (*dispatch_input_axis_event)(struct wpe_input_axis_event*);
+    void (*dispatch_input_keyboard_event)(struct wpe_input_keyboard_event*);
+};
+
+static const struct wl_pointer_listener g_pointerListener = {
+    // enter
+    [](void* data, struct wl_pointer* pointer, uint32_t serial, struct wl_surface* surface, wl_fixed_t, wl_fixed_t)
+    {
+        auto& seatData = static_cast<WlGlueHost*>(data)->seatData;
+
+        auto it = seatData.clients.find(surface);
+        if (it != seatData.clients.end())
+            seatData.pointer.target = *it;
+    },
+    // leave
+    [](void* data, struct wl_pointer*, uint32_t serial, struct wl_surface* surface)
+    {
+        auto& seatData = static_cast<WlGlueHost*>(data)->seatData;
+
+        auto it = seatData.clients.find(surface);
+        if (it != seatData.clients.end() && seatData.pointer.target.first == it->first)
+            seatData.pointer.target = { };
+    },
+    // motion
+    [](void* data, struct wl_pointer*, uint32_t time, wl_fixed_t fixedX, wl_fixed_t fixedY)
+    {
+        auto& seatData = static_cast<WlGlueHost*>(data)->seatData;
+
+        int x = wl_fixed_to_int(fixedX);
+        int y = wl_fixed_to_int(fixedY);
+        seatData.pointer.coords = { x, y };
+
+        if (seatData.pointer.target.first) {
+            struct wpe_input_pointer_event event = { wpe_input_pointer_event_type_motion,
+                time, x, y, seatData.pointer.button, seatData.pointer.state };
+            seatData.pointer.target.second->dispatch_input_pointer_event(&event);
+        }
+    },
+    // button
+    [](void* data, struct wl_pointer*, uint32_t serial, uint32_t time, uint32_t button, uint32_t state)
+    {
+        auto& seatData = static_cast<WlGlueHost*>(data)->seatData;
+
+        if (button >= BTN_MOUSE)
+            button = button - BTN_MOUSE + 1;
+        else
+            button = 0;
+
+        seatData.pointer.button = !!state ? button : 0;
+        seatData.pointer.state = state;
+
+        if (seatData.pointer.target.first) {
+            struct wpe_input_pointer_event event = { wpe_input_pointer_event_type_button,
+                time, seatData.pointer.coords.first, seatData.pointer.coords.second, button, state };
+            seatData.pointer.target.second->dispatch_input_pointer_event(&event);
+        }
+    },
+    // axis
+    [](void* data, struct wl_pointer*, uint32_t time, uint32_t axis, wl_fixed_t value)
+    {
+        auto& seatData = static_cast<WlGlueHost*>(data)->seatData;
+
+        if (seatData.pointer.target.first) {
+            struct wpe_input_axis_event event = { wpe_input_axis_event_type_motion,
+                time, seatData.pointer.coords.first, seatData.pointer.coords.second, axis, -wl_fixed_to_int(value) };
+            seatData.pointer.target.second->dispatch_input_axis_event(&event);
+        }
+    },
+};
+
+static void
+handleKeyEvent(WlGlueHost::SeatData& seatData, uint32_t key, uint32_t state, uint32_t time)
+{
+    auto& xkb = seatData.xkb;
+    uint32_t keysym = xkb_state_key_get_one_sym(xkb.state, key);
+    uint32_t unicode = xkb_state_key_get_utf32(xkb.state, key);
+
+    if (xkb.composeState
+        && state == WL_KEYBOARD_KEY_STATE_PRESSED
+        && xkb_compose_state_feed(xkb.composeState, keysym) == XKB_COMPOSE_FEED_ACCEPTED
+        && xkb_compose_state_get_status(xkb.composeState) == XKB_COMPOSE_COMPOSED)
+    {
+        keysym = xkb_compose_state_get_one_sym(xkb.composeState);
+        unicode = xkb_keysym_to_utf32(keysym);
+    }
+
+    if (seatData.keyboard.target.first) {
+        struct wpe_input_keyboard_event event = { time, keysym, unicode, !!state, xkb.modifiers };
+        seatData.keyboard.target.second->dispatch_input_keyboard_event(&event);
+    }
+}
+
+static gboolean
+repeatRateTimeout(void* data)
+{
+    auto& seatData = static_cast<WlGlueHost*>(data)->seatData;
+    handleKeyEvent(seatData, seatData.repeatData.key, seatData.repeatData.state, seatData.repeatData.time);
+    return G_SOURCE_CONTINUE;
+}
+
+static gboolean
+repeatDelayTimeout(void* data)
+{
+    auto& seatData = static_cast<WlGlueHost*>(data)->seatData;
+    handleKeyEvent(seatData, seatData.repeatData.key, seatData.repeatData.state, seatData.repeatData.time);
+    seatData.repeatData.eventSource = g_timeout_add(seatData.repeatInfo.rate, static_cast<GSourceFunc>(repeatRateTimeout), data);
+    return G_SOURCE_REMOVE;
+}
+
+static const struct wl_keyboard_listener g_keyboardListener = {
+    // keymap
+    [](void* data, struct wl_keyboard*, uint32_t format, int fd, uint32_t size)
+    {
+        auto& seatData = static_cast<WlGlueHost*>(data)->seatData;
+
+        if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
+            close(fd);
+            return;
+        }
+
+        void* mapping = mmap(nullptr, size, PROT_READ, MAP_SHARED, fd, 0);
+        if (mapping == MAP_FAILED) {
+            close(fd);
+            return;
+        }
+
+        auto& xkb = seatData.xkb;
+        xkb.keymap = xkb_keymap_new_from_string(xkb.context, static_cast<char*>(mapping),
+            XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
+        munmap(mapping, size);
+        close(fd);
+
+        if (!xkb.keymap)
+            return;
+
+        xkb.state = xkb_state_new(xkb.keymap);
+        if (!xkb.state)
+            return;
+
+        xkb.indexes.control = xkb_keymap_mod_get_index(xkb.keymap, XKB_MOD_NAME_CTRL);
+        xkb.indexes.alt = xkb_keymap_mod_get_index(xkb.keymap, XKB_MOD_NAME_ALT);
+        xkb.indexes.shift = xkb_keymap_mod_get_index(xkb.keymap, XKB_MOD_NAME_SHIFT);
+    },
+    // enter
+    [](void* data, struct wl_keyboard*, uint32_t serial, struct wl_surface* surface, struct wl_array*)
+    {
+        auto& seatData = static_cast<WlGlueHost*>(data)->seatData;
+
+        auto it = seatData.clients.find(surface);
+        if (it != seatData.clients.end())
+            seatData.keyboard.target = *it;
+    },
+    // leave
+    [](void* data, struct wl_keyboard*, uint32_t serial, struct wl_surface* surface)
+    {
+        auto& seatData = static_cast<WlGlueHost*>(data)->seatData;
+
+        auto it = seatData.clients.find(surface);
+        if (it != seatData.clients.end() && seatData.keyboard.target.first == it->first)
+            seatData.keyboard.target = { nullptr, nullptr };
+    },
+    // key
+    [](void* data, struct wl_keyboard*, uint32_t serial, uint32_t time, uint32_t key, uint32_t state)
+    {
+        auto& seatData = static_cast<WlGlueHost*>(data)->seatData;
+
+        // IDK.
+        key += 8;
+
+        handleKeyEvent(seatData, key, state, time);
+
+        if (!seatData.repeatInfo.rate)
+            return;
+
+        if (state == WL_KEYBOARD_KEY_STATE_RELEASED
+            && seatData.repeatData.key == key) {
+            if (seatData.repeatData.eventSource)
+                g_source_remove(seatData.repeatData.eventSource);
+            seatData.repeatData = { 0, 0, 0, 0 };
+        } else if (state == WL_KEYBOARD_KEY_STATE_PRESSED
+            && xkb_keymap_key_repeats(seatData.xkb.keymap, key)) {
+
+            if (seatData.repeatData.eventSource)
+                g_source_remove(seatData.repeatData.eventSource);
+
+            seatData.repeatData = { key, time, state, g_timeout_add(seatData.repeatInfo.delay, static_cast<GSourceFunc>(repeatDelayTimeout), data) };
+        }
+    },
+    // modifiers
+    [](void* data, struct wl_keyboard*, uint32_t serial, uint32_t depressedMods, uint32_t latchedMods, uint32_t lockedMods, uint32_t group)
+    {
+        auto& xkb = static_cast<WlGlueHost*>(data)->seatData.xkb;
+
+        xkb_state_update_mask(xkb.state, depressedMods, latchedMods, lockedMods, 0, 0, group);
+
+        auto& modifiers = xkb.modifiers;
+        modifiers = 0;
+        auto component = static_cast<xkb_state_component>(XKB_STATE_MODS_DEPRESSED | XKB_STATE_MODS_LATCHED);
+        if (xkb_state_mod_index_is_active(xkb.state, xkb.indexes.control, component))
+            modifiers |= wpe_input_keyboard_modifier_control;
+        if (xkb_state_mod_index_is_active(xkb.state, xkb.indexes.alt, component))
+            modifiers |= wpe_input_keyboard_modifier_alt;
+        if (xkb_state_mod_index_is_active(xkb.state, xkb.indexes.shift, component))
+            modifiers |= wpe_input_keyboard_modifier_shift;
+    },
+    // repeat_info
+    [](void* data, struct wl_keyboard*, int32_t rate, int32_t delay)
+    {
+        auto& seatData = static_cast<WlGlueHost*>(data)->seatData;
+
+        auto& repeatInfo = seatData.repeatInfo;
+        repeatInfo = { rate, delay };
+
+        // A rate of zero disables any repeating.
+        if (!rate) {
+            auto& repeatData = seatData.repeatData;
+            if (repeatData.eventSource) {
+                g_source_remove(repeatData.eventSource);
+                repeatData = { 0, 0, 0, 0 };
+            }
+        }
+    },
+};
+
+static const struct wl_seat_listener s_seatListener = {
+    // capabilities
+    [](void* data, struct wl_seat* seat, uint32_t capabilities)
+    {
+        auto* host = static_cast<WlGlueHost*>(data);
+        auto& seatData = host->seatData;
+
+        // WL_SEAT_CAPABILITY_POINTER
+        const bool hasPointerCap = capabilities & WL_SEAT_CAPABILITY_POINTER;
+        if (hasPointerCap && !seatData.pointer.object) {
+            seatData.pointer.object = wl_seat_get_pointer(seat);
+            wl_pointer_add_listener(seatData.pointer.object, &g_pointerListener, host);
+        }
+        if (!hasPointerCap && seatData.pointer.object) {
+            wl_pointer_destroy(seatData.pointer.object);
+            seatData.pointer.object = nullptr;
+        }
+
+        // WL_SEAT_CAPABILITY_KEYBOARD
+        const bool hasKeyboardCap = capabilities & WL_SEAT_CAPABILITY_KEYBOARD;
+        if (hasKeyboardCap && !seatData.keyboard.object) {
+            seatData.keyboard.object = wl_seat_get_keyboard(seat);
+            wl_keyboard_add_listener(seatData.keyboard.object, &g_keyboardListener, host);
+        }
+        if (!hasKeyboardCap && seatData.keyboard.object) {
+            wl_keyboard_destroy(seatData.keyboard.object);
+            seatData.keyboard.object = nullptr;
+        }
+    },
+    // name
+    [](void*, struct wl_seat*, const char*) { }
 };
 
 struct wlglue_window_client;
@@ -162,7 +480,7 @@ extern "C" {
 struct WlGlueHost*
 wlglue_host_create()
 {
-    WlGlueHost* host = g_new0(WlGlueHost, 1);
+    WlGlueHost* host = new WlGlueHost;
     if (!host)
         return nullptr;
 
@@ -177,6 +495,14 @@ wlglue_host_create()
 
         if (host->xdg_v6)
             zxdg_shell_v6_add_listener(host->xdg_v6, &s_xdg6ShellListener, nullptr);
+
+        if (host->seat)
+            wl_seat_add_listener(host->seat, &s_seatListener, host);
+
+        host->seatData.xkb.context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+        host->seatData.xkb.composeTable = xkb_compose_table_new_from_locale(host->seatData.xkb.context, setlocale(LC_CTYPE, nullptr), XKB_COMPOSE_COMPILE_NO_FLAGS);
+        if (host->seatData.xkb.composeTable)
+            host->seatData.xkb.composeState = xkb_compose_state_new(host->seatData.xkb.composeTable, XKB_COMPOSE_STATE_NO_FLAGS);
     }
 
     host->eventSource = g_source_new(&EventSource::sourceFuncs, sizeof(EventSource));
@@ -209,15 +535,10 @@ wlglue_host_get_egl_display(struct WlGlueHost* host)
     return host->eglDisplay;
 }
 
-struct wlglue_window_client {
-    void (*frame_displayed)();
-    void (*release_buffer_resource)(struct wl_resource*);
-};
-
 struct WlGlueWindow*
 wlglue_window_create(struct WlGlueHost* host, struct wlglue_window_client* client)
 {
-    WlGlueWindow* window = g_new0(WlGlueWindow, 1);
+    WlGlueWindow* window = new WlGlueWindow;
     if (!window)
         return nullptr;
 
@@ -310,6 +631,8 @@ wlglue_window_create(struct WlGlueHost* host, struct wlglue_window_client* clien
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1280, 720, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
         glBindTexture(GL_TEXTURE_2D, 0);
     }
+
+    host->seatData.clients.insert({ window->surface, client });
 
     return window;
 }
