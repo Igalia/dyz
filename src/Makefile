@@ -34,6 +34,7 @@ LUA_SRCS := \
 	apps/singleview/main.lua \
 	entrypoint.lua \
 	lib/glib.lua \
+	lib/wpebackend.lua \
 	lib/wpebackend_fdo.lua \
 	lib/wpewebkit_glibapi.lua \
 	main.lua \
