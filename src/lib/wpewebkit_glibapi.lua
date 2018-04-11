@@ -1,6 +1,6 @@
 local ffi = require("ffi")
 
-local wk = ffi.load("libWPEWebKit.so")
+local wk = ffi.load("libWPEWebKit-0.1.so")
 
 ffi.cdef[[
     typedef struct _WebKitAutomationSession WebKitAutomationSession;
