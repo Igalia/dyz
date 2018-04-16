@@ -47,8 +47,8 @@ LUA_OBJS := \
 LUAJIT_CFLAGS := $(shell pkg-config luajit --cflags)
 LUAJIT_LDLIBS := $(shell pkg-config luajit --libs)
 
-WPEBACKEND_CFLAGS := $(shell pkg-config wpe --cflags)
-WPEBACKEND_LDLIBS := $(shell pkg-config wpe --libs)
+WPEBACKEND_CFLAGS := $(shell pkg-config wpe-0.1 --cflags)
+WPEBACKEND_LDLIBS := $(shell pkg-config wpe-0.1 --libs)
 
 CFLAGS  += $(LUAJIT_CFLAGS)
 LDFLAGS += $(LUAJIT_LDLIBS)
@@ -58,8 +58,8 @@ X11HOST_LDLIBS := $(shell pkg-config egl glib-2.0 x11-xcb --libs)
 libx11host.so: x11host.cpp
 	$(CXX) -shared -std=c++11 -fPIC -o $@ $^ $(X11HOST_CFLAGS) $(X11HOST_LDLIBS)
 
-WLGLUE_CFLAGS := $(shell pkg-config egl glib-2.0 wayland-client wayland-egl glesv2 wpe xkbcommon --cflags)
-WLGLUE_LDLIBS := $(shell pkg-config egl glib-2.0 wayland-client wayland-egl glesv2 wpe xkbcommon --libs)
+WLGLUE_CFLAGS := $(shell pkg-config egl glib-2.0 wayland-client wayland-egl glesv2 wpe-0.1 xkbcommon --cflags)
+WLGLUE_LDLIBS := $(shell pkg-config egl glib-2.0 wayland-client wayland-egl glesv2 wpe-0.1 xkbcommon --libs)
 xdg-shell-unstable-v6-protocol.o: xdg-shell-unstable-v6-protocol.c
 	$(CC) -c -o $@ $^ $(WLGLUE_CFLAGS)
 libwlglue.so: wlglue.cpp xdg-shell-unstable-v6-protocol.o

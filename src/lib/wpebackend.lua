@@ -1,6 +1,6 @@
 local ffi = require("ffi")
 
-local lib = ffi.load("libWPEBackend.so")
+local lib = ffi.load("libWPEBackend-0.1.so")
 
 ffi.cdef[[
     struct wpe_view_backend;
