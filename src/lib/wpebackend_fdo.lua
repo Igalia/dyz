@@ -1,6 +1,6 @@
 local ffi = require("ffi")
 
-local lib = ffi.load("libWPEBackend-fdo.so")
+local lib = ffi.load("libWPEBackend-fdo-0.1.so")
 
 ffi.cdef[[
     typedef void* EGLDisplay;
