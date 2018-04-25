@@ -15,7 +15,7 @@
 #include <unordered_map>
 
 #include <linux/input.h>
-#include <wpe/input.h>
+#include <wpe/wpe.h>
 
 #include <unistd.h>
 #include <sys/mman.h>
