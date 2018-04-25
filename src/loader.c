@@ -1,4 +1,4 @@
-#include <wpe/loader.h>
+#include <wpe/wpe.h>
 
 #include <dlfcn.h>
 #include <stdio.h>
@@ -10,7 +10,7 @@ static struct wpe_loader_interface* s_relay_loader = 0;
 void* relay_load_object(const char* object_name)
 {
     if (!s_relay_library) {
-        s_relay_library = dlopen("libWPEBackend-fdo.so", RTLD_NOW);
+        s_relay_library = dlopen("libWPEBackend-fdo-0.1.so", RTLD_NOW);
         if (s_relay_library)
             s_relay_loader = dlsym(s_relay_library, "_wpe_loader_interface");
     }
