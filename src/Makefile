@@ -51,7 +51,7 @@ WPEBACKEND_CFLAGS := $(shell pkg-config wpe-0.1 --cflags)
 WPEBACKEND_LDLIBS := $(shell pkg-config wpe-0.1 --libs)
 
 CFLAGS  += $(LUAJIT_CFLAGS)
-LDFLAGS += $(LUAJIT_LDLIBS)
+LDFLAGS += $(LUAJIT_LDLIBS) -lm -ldl
 
 X11HOST_CFLAGS := $(shell pkg-config egl glib-2.0 x11-xcb --cflags)
 X11HOST_LDLIBS := $(shell pkg-config egl glib-2.0 x11-xcb --libs)
