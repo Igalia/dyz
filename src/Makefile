@@ -64,11 +64,11 @@ xdg-shell-unstable-v6-protocol.o: xdg-shell-unstable-v6-protocol.c
 	$(CC) -c -o $@ $^ $(WLGLUE_CFLAGS)
 libwlglue.so: wlglue.cpp xdg-shell-unstable-v6-protocol.o
 	mkdir -p $(DESTDIR)$(LIBDIR)
-	$(CXX) -shared -std=c++11 -fPIC -o $@ $^ $(WLGLUE_CFLAGS) $(WLGLUE_LDLIBS) -Wl,-rpath -Wl,$(LIBDIR)
+	$(CXX) -shared -std=c++11 -fPIC -o $@ $^ $(WLGLUE_CFLAGS) $(WLGLUE_LDLIBS)
 
 dyz: main.o libwlglue.so $(LUA_OBJS)
 	mkdir -p $(DESTDIR)$(BINDIR)
-	$(CC) -o $@ $^ $(LDFLAGS) -Wl,--no-as-needed -Wl,-E -Wl,-rpath -Wl,$(LIBDIR)
+	$(CC) -o $@ $^ $(LDFLAGS) -Wl,--no-as-needed -Wl,-E
 
 %_lua.o: %.lua
 	$(LUAJIT) -bg -a $(ARCH) -n $(subst /,.,$*) $< $@
