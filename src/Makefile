@@ -61,7 +61,7 @@ libx11host.so: x11host.cpp
 WLGLUE_CFLAGS := $(shell pkg-config egl glib-2.0 wayland-client wayland-egl glesv2 wpe-0.1 xkbcommon --cflags)
 WLGLUE_LDLIBS := $(shell pkg-config egl glib-2.0 wayland-client wayland-egl glesv2 wpe-0.1 xkbcommon --libs)
 xdg-shell-unstable-v6-protocol.o: xdg-shell-unstable-v6-protocol.c
-	$(CC) -c -o $@ $^ $(WLGLUE_CFLAGS)
+	$(CC) -fPIC -c -o $@ $^ $(WLGLUE_CFLAGS)
 libwlglue.so: wlglue.cpp xdg-shell-unstable-v6-protocol.o
 	mkdir -p $(DESTDIR)$(LIBDIR)
 	$(CXX) -shared -std=c++11 -fPIC -o $@ $^ $(WLGLUE_CFLAGS) $(WLGLUE_LDLIBS)
